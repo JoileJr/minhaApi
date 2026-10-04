@@ -67,8 +67,13 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Restore
+        run: dotnet restore MinhaApi.csproj
+
       - name: Instalar EF Core CLI
-        run: dotnet tool install --global dotnet-ef
+        run: |
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Aplicar migrations
         run: dotnet ef database update --project MinhaApi.csproj
