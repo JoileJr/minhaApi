@@ -110,9 +110,13 @@ GET /api/objetos?page=1&pageSize=2
 | Exceção | Status | `title` |
 |---|---|---|
 | `NotFoundException` | 404 | `Recurso não encontrado` |
-| `ArgumentException` / `BadHttpRequestException` | 400 | `Requisição inválida` |
-| `DbUpdateException` | 409 | `Conflito ao persistir os dados` |
+| `BadRequestException` | 400 | `Requisição inválida` |
+| `ConflictException` / `DbUpdateException` | 409 | `Conflito ao persistir os dados` |
+| `HttpRequestException` (falha na ViaCEP) | 502 | `Falha na integração externa` |
 | demais | 500 | `Erro interno do servidor` |
+
+Erros de domínio herdam de `AppException` (cada tipo carrega seu `StatusCode`/`Title`),
+então um novo tipo de erro = uma nova classe em `Exceptions/`, sem alterar o handler (OCP).
 
 Exemplos reais:
 

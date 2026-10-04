@@ -38,7 +38,7 @@ public class ViaCepService : IViaCepService
         var normalizado = new string((cep ?? string.Empty).Where(char.IsDigit).ToArray());
 
         if (normalizado.Length != 8)
-            throw new ArgumentException("CEP inválido. Informe os 8 dígitos do CEP.", nameof(cep));
+            throw new BadRequestException("CEP inválido. Informe os 8 dígitos do CEP.");
 
         _logger.LogInformation("Buscando endereço na ViaCEP para o CEP {Cep}", normalizado);
 

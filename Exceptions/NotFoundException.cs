@@ -1,8 +1,9 @@
 namespace MinhaApi.Exceptions;
 
-public class NotFoundException : Exception
+public class NotFoundException : AppException
 {
-    public NotFoundException(string message) : base(message)
+    public NotFoundException(string message)
+        : base(StatusCodes.Status404NotFound, "Recurso não encontrado", message)
     {
     }
 

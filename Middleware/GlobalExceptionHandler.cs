@@ -24,14 +24,27 @@ public class GlobalExceptionHandler : IExceptionHandler
         if (cancellationToken.IsCancellationRequested)
             return false;
 
-        var (status, title) = exception switch
+        // Erros de domínio: cada tipo carrega seu próprio status/título.
+        // Novo tipo de erro = nova classe em Exceptions/, sem tocar neste arquivo (OCP).
+        int status;
+        string title;
+
+        if (exception is AppException app)
         {
-            NotFoundException => (StatusCodes.Status404NotFound, "Recurso não encontrado"),
-            ArgumentException or BadHttpRequestException => (StatusCodes.Status400BadRequest, "Requisição inválida"),
-            DbUpdateException => (StatusCodes.Status409Conflict, "Conflito ao persistir os dados"),
-            OperationCanceledException => (StatusCodes.Status500InternalServerError, "Operação cancelada"),
-            _ => (StatusCodes.Status500InternalServerError, "Erro interno do servidor")
-        };
+            status = app.StatusCode;
+            title = app.Title;
+        }
+        else
+        {
+            // Exceções de framework/infra (conjunto fechado, fora do nosso domínio).
+            (status, title) = exception switch
+            {
+                BadHttpRequestException => (StatusCodes.Status400BadRequest, "Requisição inválida"),
+                DbUpdateException => (StatusCodes.Status409Conflict, "Conflito ao persistir os dados"),
+                HttpRequestException => (StatusCodes.Status502BadGateway, "Falha na integração externa"),
+                _ => (StatusCodes.Status500InternalServerError, "Erro interno do servidor")
+            };
+        }
 
         if (status == StatusCodes.Status500InternalServerError)
             _logger.LogError(exception, "Erro não tratado em {Path}", httpContext.Request.Path);
