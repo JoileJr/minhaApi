@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using MinhaApi.Dtos;
-using MinhaApi.Models;
 using MinhaApi.Services;
 
 namespace MinhaApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Produces("application/json")]
 public class ObjetosController : ControllerBase
 {
     private readonly IObjetoService _service;
@@ -17,45 +17,52 @@ public class ObjetosController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Objeto>>> Listar()
+    [ProducesResponseType(typeof(PagedResponse<ObjetoResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PagedResponse<ObjetoResponseDto>>> Listar(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
     {
-        return Ok(await _service.ListarAsync());
+        return Ok(await _service.ListarAsync(page, pageSize, cancellationToken));
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Objeto>> BuscarPorId(int id)
+    [ProducesResponseType(typeof(ObjetoResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ObjetoResponseDto>> BuscarPorId(int id, CancellationToken cancellationToken)
     {
-        var objeto = await _service.BuscarPorIdAsync(id);
-        if (objeto is null)
-            return NotFound();
-
-        return Ok(objeto);
+        return Ok(await _service.BuscarPorIdAsync(id, cancellationToken));
     }
 
     [HttpPost]
-    public async Task<ActionResult<Objeto>> Criar([FromBody] ObjetoCreateDto dto)
+    [ProducesResponseType(typeof(ObjetoResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ObjetoResponseDto>> Criar([FromBody] ObjetoCreateDto dto, CancellationToken cancellationToken)
     {
-        var criado = await _service.CriarAsync(dto);
+        var criado = await _service.CriarAsync(dto, cancellationToken);
         return CreatedAtAction(nameof(BuscarPorId), new { id = criado.Id }, criado);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<Objeto>> Atualizar(int id, [FromBody] ObjetoUpdateDto dto)
+    [ProducesResponseType(typeof(ObjetoResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ObjetoResponseDto>> Atualizar(int id, [FromBody] ObjetoUpdateDto dto, CancellationToken cancellationToken)
     {
-        var atualizado = await _service.AtualizarAsync(id, dto);
-        if (atualizado is null)
-            return NotFound();
-
-        return Ok(atualizado);
+        return Ok(await _service.AtualizarAsync(id, dto, cancellationToken));
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Remover(int id)
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Remover(int id, CancellationToken cancellationToken)
     {
-        var removido = await _service.RemoverAsync(id);
-        if (!removido)
-            return NotFound();
-
+        await _service.RemoverAsync(id, cancellationToken);
         return NoContent();
     }
 }
