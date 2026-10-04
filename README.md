@@ -1,5 +1,7 @@
 # MinhaApi
 
+[![CI](https://github.com/JoileJr/minhaApi/actions/workflows/ci.yml/badge.svg)](https://github.com/JoileJr/minhaApi/actions/workflows/ci.yml)
+
 Primeira API em **ASP.NET Core (.NET 10)** com CRUD de `Objeto`
 (`id`, `nome`, `descricao`), PostgreSQL via Docker, Entity Framework Core,
 integração externa de exemplo (ViaCEP), Swagger e tratamento global de erros
@@ -203,6 +205,18 @@ Nova migration (se mudar o modelo):
 dotnet ef migrations add NomeDaMigration
 dotnet ef database update
 ```
+
+## CI (GitHub Actions)
+
+Workflow em `.github/workflows/ci.yml`, executado em `push` e `pull_request` na `main`:
+
+| Job | O que faz |
+|---|---|
+| `build-and-test` | `restore` + `build` Release da `MinhaApi.slnx` e `dotnet test` (29 testes, sem banco — InMemory/mocks), com upload dos resultados como artifact |
+| `migrations` | Sobe Postgres 16 (service), aplica `dotnet ef database update` e faz smoke test (`POST` + `GET /api/objetos`) contra banco real |
+
+Segredos no CI vêm de variáveis de ambiente (`ConnectionStrings__DefaultConnection`);
+o `.env` é só para desenvolvimento local e não existe no runner.
 
 ## Observações
 

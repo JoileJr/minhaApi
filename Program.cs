@@ -4,7 +4,9 @@ using MinhaApi.Middleware;
 using MinhaApi.Services;
 using MinhaApi.Settings;
 
-DotNetEnv.Env.Load();
+// Carrega o .env local quando existir; no CI/produção vale a variável de ambiente.
+if (File.Exists(".env"))
+    DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 

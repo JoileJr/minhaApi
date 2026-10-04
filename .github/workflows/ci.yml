@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: 10.0.x
+  CONFIGURATION: Release
+
+jobs:
+  build-and-test:
+    name: Build + testes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore MinhaApi.slnx
+
+      - name: Build
+        run: dotnet build MinhaApi.slnx --no-restore -c ${{ env.CONFIGURATION }}
+
+      - name: Test
+        run: dotnet test MinhaApi.slnx --no-build -c ${{ env.CONFIGURATION }} --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      - name: Upload resultados dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+
+  migrations:
+    name: Migrations + smoke (Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: minhaapi
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d minhaapi"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=minhaapi;Username=postgres;Password=postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Instalar EF Core CLI
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Aplicar migrations
+        run: dotnet ef database update --project MinhaApi.csproj
+
+      - name: Smoke test da API
+        run: |
+          dotnet run --project MinhaApi.csproj -c ${{ env.CONFIGURATION }} --urls "http://localhost:5062" &
+          API_PID=$!
+          for i in $(seq 1 30); do
+            sleep 2
+            if curl -sf http://localhost:5062/api/objetos > /dev/null; then
+              break
+            fi
+          done
+          curl -sf -X POST http://localhost:5062/api/objetos \
+            -H "Content-Type: application/json" \
+            -d '{"nome":"CI","descricao":"smoke test"}'
+          curl -sf "http://localhost:5062/api/objetos?page=1&pageSize=10"
+          kill $API_PID
